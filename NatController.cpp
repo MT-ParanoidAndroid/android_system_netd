@@ -53,7 +53,8 @@ int NatController::runIptablesCmd(const char *cmd) {
 
     while ((tmp = strsep(&next, " "))) {
         args[i++] = tmp;
-        if (i == 16) {
+//        if (i == 16) {	KD 9/25 Make "20" to accomodate MSS clamp
+        if (i == 20) {
             LOGE("iptables argument overflow");
             errno = E2BIG;
             return -1;
@@ -134,6 +135,14 @@ int NatController::doNatCommands(const char *intIface, const char *extIface, boo
             // unwind what's been done, but don't care about success - what more could we do?
             setDefaults();;
             return -1;
+        }
+        snprintf(cmd, sizeof(cmd), "-t mangle -A POSTROUTING -p tcp --tcp-flags SYN,RST SYN -o %s -j TCPMSS --clamp-mss-to-pmtu", extIface);
+        if (runIptablesCmd(cmd)) {
+	    //
+            // Ignore return state but log error if it didn't work; either
+	    // kernel iptables are missing required options.
+	    //
+           LOGE("MSS Clamp failed attempting [%s]; check kernel and iptables capabilities", cmd);
         }
     }
 
