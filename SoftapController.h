@@ -25,7 +25,7 @@
 #define AP_BSS_START_DELAY	200000
 #define AP_BSS_STOP_DELAY	500000
 #define AP_SET_CFG_DELAY	500000
-#define AP_DRIVER_START_DELAY	800000
+#define AP_DRIVER_START_DELAY	400000
 
 class SoftapController {
     char mBuf[SOFTAP_MAX_BUFFER_SIZE];
@@ -33,6 +33,7 @@ class SoftapController {
     pid_t mPid;
     int mSock;
 
+    int getPrivFuncNum(char *iface, const char *fname);
     int addParam(int pos, const char *cmd, const char *arg);
     int setCommand(char *iface, const char *fname, unsigned buflen=0);
 public:

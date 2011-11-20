@@ -14,7 +14,6 @@ LOCAL_SRC_FILES:=                                      \
                   PppController.cpp                    \
                   ResolverController.cpp               \
                   SecondaryTableController.cpp         \
-                  SoftapController.cpp                 \
                   TetherController.cpp                 \
                   ThrottleController.cpp               \
                   logwrapper.c                         \
@@ -35,12 +34,35 @@ LOCAL_CFLAGS :=
 
 LOCAL_SHARED_LIBRARIES := libstlport libsysutils libcutils libnetutils \
                           libcrypto libhardware_legacy
+#ifdef OMAP_ENHANCEMENT
+ifdef BOARD_SOFTAP_DEVICE
+LOCAL_CFLAGS += -D__BYTE_ORDER_LITTLE_ENDIAN
+LOCAL_STATIC_LIBRARIES := libhostapdcli
+LOCAL_C_INCLUDES += $(WILINK_INCLUDES)
+LOCAL_SRC_FILES += SoftapControllerTI.cpp
+else ifeq ($(WIFI_DRIVER_MODULE_NAME),ar6000)
+  ifneq ($(WIFI_DRIVER_MODULE_PATH),rfkill)
+    LOCAL_CFLAGS += -DWIFI_MODULE_PATH=\"$(WIFI_DRIVER_MODULE_PATH)\"
+  endif
+LOCAL_C_INCLUDES += external/wpa_supplicant external/hostapd
+LOCAL_SRC_FILES += SoftapControllerATH.cpp
+else ifeq ($(BOARD_WLAN_DEVICE),libra)
+LOCAL_C_INCLUDES += external/wpa_supplicant external/hostapd
+LOCAL_SRC_FILES += SoftapControllerQC.cpp
+else
+LOCAL_SRC_FILES += SoftapController.cpp
+endif
+#endif
 
 ifneq ($(BOARD_HOSTAPD_DRIVER),)
   LOCAL_CFLAGS += -DHAVE_HOSTAPD
   ifneq ($(BOARD_HOSTAPD_DRIVER_NAME),)
     LOCAL_CFLAGS += -DHOSTAPD_DRIVER_NAME=\"$(BOARD_HOSTAPD_DRIVER_NAME)\"
   endif
+endif
+
+ifeq ($(BOARD_WLAN_DEVICE),libra)
+LOCAL_SHARED_LIBRARIES := $(LOCAL_SHARED_LIBRARIES) libwpa_client
 endif
 
 ifeq ($(BOARD_HAVE_BLUETOOTH),true)
@@ -63,3 +85,4 @@ LOCAL_CFLAGS :=
 LOCAL_SHARED_LIBRARIES := libcutils
 
 include $(BUILD_EXECUTABLE)
+
