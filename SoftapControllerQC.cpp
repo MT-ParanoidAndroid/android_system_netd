@@ -439,7 +439,7 @@ int SoftapController::getPrivFuncNum(char *iface, const char *fname) {
     wrq.u.data.length = sizeof(mBuf) / sizeof(struct iw_priv_args);
     wrq.u.data.flags = 0;
     if ((ret = ioctl(mSock, SIOCGIWPRIV, &wrq)) < 0) {
-        LOGE("SIOCGIPRIV failed: %d", ret);
+        LOGE("SIOCGIWPRIV failed: %d", ret);
         return ret;
     }
     priv_ptr = (struct iw_priv_args *)wrq.u.data.pointer;
@@ -465,7 +465,7 @@ int SoftapController::setCommand(char *iface, const char *fname, unsigned buflen
     wrq.u.data.length = sizeof(tBuf) / sizeof(struct iw_priv_args);
     wrq.u.data.flags = 0;
     if ((ret = ioctl(mSock, SIOCGIWPRIV, &wrq)) < 0) {
-        LOGE("SIOCGIPRIV failed: %d", ret);
+        LOGE("SIOCGIWPRIV failed: %d", ret);
         return ret;
     }
 
