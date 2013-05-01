@@ -19,13 +19,12 @@
 
 #include <linux/in.h>
 #include <net/if.h>
-#include <utils/List.h>
 
 #define SOFTAP_MAX_BUFFER_SIZE	4096
 #define AP_BSS_START_DELAY	200000
 #define AP_BSS_STOP_DELAY	500000
 #define AP_SET_CFG_DELAY	500000
-#define AP_DRIVER_START_DELAY	400000
+#define AP_DRIVER_START_DELAY	800000
 
 class SoftapController {
     char mBuf[SOFTAP_MAX_BUFFER_SIZE];

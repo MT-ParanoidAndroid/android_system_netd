@@ -53,7 +53,7 @@ TetherController::~TetherController() {
 
 int TetherController::setIpFwdEnabled(bool enable) {
 
-    LOGD("Setting IP forward enable = %d", enable);
+    ALOGD("Setting IP forward enable = %d", enable);
 
     // In BP tools mode, do not disable IP forwarding
     char bootmode[PROPERTY_VALUE_MAX] = {0};
@@ -64,12 +64,12 @@ int TetherController::setIpFwdEnabled(bool enable) {
 
     int fd = open("/proc/sys/net/ipv4/ip_forward", O_WRONLY);
     if (fd < 0) {
-        LOGE("Failed to open ip_forward (%s)", strerror(errno));
+        ALOGE("Failed to open ip_forward (%s)", strerror(errno));
         return -1;
     }
 
     if (write(fd, (enable ? "1" : "0"), 1) != 1) {
-        LOGE("Failed to write ip_forward (%s)", strerror(errno));
+        ALOGE("Failed to write ip_forward (%s)", strerror(errno));
         close(fd);
         return -1;
     }
@@ -81,13 +81,13 @@ bool TetherController::getIpFwdEnabled() {
     int fd = open("/proc/sys/net/ipv4/ip_forward", O_RDONLY);
 
     if (fd < 0) {
-        LOGE("Failed to open ip_forward (%s)", strerror(errno));
+        ALOGE("Failed to open ip_forward (%s)", strerror(errno));
         return false;
     }
 
     char enabled;
     if (read(fd, &enabled, 1) != 1) {
-        LOGE("Failed to read ip_forward (%s)", strerror(errno));
+        ALOGE("Failed to read ip_forward (%s)", strerror(errno));
         close(fd);
         return -1;
     }
@@ -98,23 +98,23 @@ bool TetherController::getIpFwdEnabled() {
 
 int TetherController::startTethering(int num_addrs, struct in_addr* addrs, int lease_time) {
     if (mDaemonPid != 0) {
-        LOGE("Tethering already started");
+        ALOGE("Tethering already started");
         errno = EBUSY;
         return -1;
     }
 
     if (lease_time <= 0) {
-        LOGE("Invalid lease time %d!\n", lease_time);
+        ALOGE("Invalid lease time %d!\n", lease_time);
         return -1;
     }
 
-    LOGD("Starting tethering services, lease_time=%d", lease_time);
+    ALOGD("Starting tethering services");
 
     pid_t pid;
     int pipefd[2];
 
     if (pipe(pipefd) < 0) {
-        LOGE("pipe failed (%s)", strerror(errno));
+        ALOGE("pipe failed (%s)", strerror(errno));
         return -1;
     }
 
@@ -123,7 +123,7 @@ int TetherController::startTethering(int num_addrs, struct in_addr* addrs, int l
      * the daemon if it exits prematurely
      */
     if ((pid = fork()) < 0) {
-        LOGE("fork failed (%s)", strerror(errno));
+        ALOGE("fork failed (%s)", strerror(errno));
         close(pipefd[0]);
         close(pipefd[1]);
         return -1;
@@ -133,21 +133,23 @@ int TetherController::startTethering(int num_addrs, struct in_addr* addrs, int l
         close(pipefd[1]);
         if (pipefd[0] != STDIN_FILENO) {
             if (dup2(pipefd[0], STDIN_FILENO) != STDIN_FILENO) {
-                LOGE("dup2 failed (%s)", strerror(errno));
+                ALOGE("dup2 failed (%s)", strerror(errno));
                 return -1;
             }
             close(pipefd[0]);
         }
 
-        int num_processed_args = 4 + (num_addrs/2) + 1; // 1 null for termination
+        int num_processed_args = 5 + (num_addrs/2) + 1; // 1 null for termination
         char **args = (char **)malloc(sizeof(char *) * num_processed_args);
         args[num_processed_args - 1] = NULL;
         args[0] = (char *)"/system/bin/dnsmasq";
         args[1] = (char *)"--no-daemon";
         args[2] = (char *)"--no-resolv";
         args[3] = (char *)"--no-poll";
+        // TODO: pipe through metered status from ConnService
+        args[4] = (char *)"--dhcp-option-force=43,ANDROID_METERED";
 
-        int nextArg = 4;
+        int nextArg = 5;
         for (int addrIndex=0; addrIndex < num_addrs;) {
             char *start = strdup(inet_ntoa(addrs[addrIndex++]));
             char *end = strdup(inet_ntoa(addrs[addrIndex++]));
@@ -155,16 +157,16 @@ int TetherController::startTethering(int num_addrs, struct in_addr* addrs, int l
         }
 
         if (execv(args[0], args)) {
-            LOGE("execl failed (%s)", strerror(errno));
+            ALOGE("execl failed (%s)", strerror(errno));
         }
-        LOGE("Should never get here!");
+        ALOGE("Should never get here!");
         free(args);
         return 0;
     } else {
         close(pipefd[0]);
         mDaemonPid = pid;
         mDaemonFd = pipefd[1];
-        LOGD("Tethering services running");
+        ALOGD("Tethering services running");
     }
 
     return 0;
@@ -173,18 +175,18 @@ int TetherController::startTethering(int num_addrs, struct in_addr* addrs, int l
 int TetherController::stopTethering() {
 
     if (mDaemonPid == 0) {
-        LOGE("Tethering already stopped");
+        ALOGE("Tethering already stopped");
         return 0;
     }
 
-    LOGD("Stopping tethering services");
+    ALOGD("Stopping tethering services");
 
     kill(mDaemonPid, SIGTERM);
     waitpid(mDaemonPid, NULL, 0);
     mDaemonPid = 0;
     close(mDaemonFd);
     mDaemonFd = -1;
-    LOGD("Tethering services stopped");
+    ALOGD("Tethering services stopped");
     return 0;
 }
 
@@ -203,19 +205,19 @@ int TetherController::setDnsForwarders(char **servers, int numServers) {
 
     mDnsForwarders->clear();
     for (i = 0; i < numServers; i++) {
-        LOGD("setDnsForwarders(%d = '%s')", i, servers[i]);
+        ALOGD("setDnsForwarders(%d = '%s')", i, servers[i]);
 
         struct in_addr a;
 
         if (!inet_aton(servers[i], &a)) {
-            LOGE("Failed to parse DNS server '%s'", servers[i]);
+            ALOGE("Failed to parse DNS server '%s'", servers[i]);
             mDnsForwarders->clear();
             return -1;
         }
 
         cmdLen += strlen(servers[i]);
         if (cmdLen + 2 >= MAX_CMD_SIZE) {
-            LOGD("Too many DNS servers listed");
+            ALOGD("Too many DNS servers listed");
             break;
         }
 
@@ -225,9 +227,9 @@ int TetherController::setDnsForwarders(char **servers, int numServers) {
     }
 
     if (mDaemonFd != -1) {
-        LOGD("Sending update msg to dnsmasq [%s]", daemonCmd);
+        ALOGD("Sending update msg to dnsmasq [%s]", daemonCmd);
         if (write(mDaemonFd, daemonCmd, strlen(daemonCmd) +1) < 0) {
-            LOGE("Failed to send update command to dnsmasq (%s)", strerror(errno));
+            ALOGE("Failed to send update command to dnsmasq (%s)", strerror(errno));
             mDnsForwarders->clear();
             return -1;
         }

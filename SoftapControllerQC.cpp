@@ -92,7 +92,7 @@ static int write_int(char const* path, int value)
         return amt == -1 ? -errno : 0;
     } else {
         if (already_warned == 0) {
-            LOGE("write_int failed to open %s\n", path);
+            ALOGE("write_int failed to open %s\n", path);
             already_warned = 1;
         }
         return -errno;
@@ -109,7 +109,7 @@ static int init_rfkill() {
         snprintf(path, sizeof(path), "/sys/class/rfkill/rfkill%d/type", id);
         fd = open(path, O_RDONLY);
         if (fd < 0) {
-            LOGW("open(%s) failed: %s (%d)\n", path, strerror(errno), errno);
+            ALOGW("open(%s) failed: %s (%d)\n", path, strerror(errno), errno);
             return -1;
         }
         sz = read(fd, &buf, sizeof(buf));
@@ -136,13 +136,13 @@ static int check_wifi_power() {
 
     fd = open(rfkill_state_path, O_RDONLY);
     if (fd < 0) {
-        LOGE("open(%s) failed: %s (%d)", rfkill_state_path, strerror(errno),
+        ALOGE("open(%s) failed: %s (%d)", rfkill_state_path, strerror(errno),
                 errno);
         goto out;
     }
     sz = read(fd, &buffer, 1);
     if (sz != 1) {
-        LOGE("read(%s) failed: %s (%d)", rfkill_state_path, strerror(errno),
+        ALOGE("read(%s) failed: %s (%d)", rfkill_state_path, strerror(errno),
                 errno);
         goto out;
     }
@@ -177,7 +177,7 @@ static int set_wifi_power(int on) {
 
     fd = open(rfkill_state_path, O_WRONLY);
     if (fd < 0) {
-        LOGE("open(%s) for write failed: %s (%d)", rfkill_state_path,
+        ALOGE("open(%s) for write failed: %s (%d)", rfkill_state_path,
                 strerror(errno), errno);
         goto out;
     }
@@ -185,7 +185,7 @@ static int set_wifi_power(int on) {
     sleep(3);
     sz = write(fd, &buffer, 1);
     if (sz < 0) {
-        LOGE("write(%s) failed: %s (%d)", rfkill_state_path, strerror(errno),
+        ALOGE("write(%s) failed: %s (%d)", rfkill_state_path, strerror(errno),
                 errno);
         goto out;
     }
@@ -207,26 +207,26 @@ int ensure_config_file_exists()
     if (access(HOSTAPD_CONFIG_FILE, R_OK|W_OK) == 0) {
         return 0;
     } else if (errno != ENOENT) {
-        LOGE("Cannot access \"%s\": %s", HOSTAPD_CONFIG_FILE, strerror(errno));
+        ALOGE("Cannot access \"%s\": %s", HOSTAPD_CONFIG_FILE, strerror(errno));
         return -1;
     }
 
     srcfd = open(HOSTAPD_CONFIG_TEMPLATE, O_RDONLY);
     if (srcfd < 0) {
-        LOGE("Cannot open \"%s\": %s", HOSTAPD_CONFIG_TEMPLATE, strerror(errno));
+        ALOGE("Cannot open \"%s\": %s", HOSTAPD_CONFIG_TEMPLATE, strerror(errno));
         return -1;
     }
 
     destfd = open(HOSTAPD_CONFIG_FILE, O_CREAT|O_WRONLY, 0660);
     if (destfd < 0) {
         close(srcfd);
-        LOGE("Cannot create \"%s\": %s", HOSTAPD_CONFIG_FILE, strerror(errno));
+        ALOGE("Cannot create \"%s\": %s", HOSTAPD_CONFIG_FILE, strerror(errno));
         return -1;
     }
 
     while ((nread = read(srcfd, buf, sizeof(buf))) != 0) {
         if (nread < 0) {
-            LOGE("Error reading \"%s\": %s", HOSTAPD_CONFIG_TEMPLATE, strerror(errno));
+            ALOGE("Error reading \"%s\": %s", HOSTAPD_CONFIG_TEMPLATE, strerror(errno));
             close(srcfd);
             close(destfd);
             unlink(HOSTAPD_CONFIG_FILE);
@@ -239,7 +239,7 @@ int ensure_config_file_exists()
     close(srcfd);
 
     if (chown(HOSTAPD_CONFIG_FILE, AID_SYSTEM, AID_WIFI) < 0) {
-        LOGE("Error changing group ownership of %s to %d: %s",
+        ALOGE("Error changing group ownership of %s to %d: %s",
              HOSTAPD_CONFIG_FILE, AID_WIFI, strerror(errno));
         unlink(HOSTAPD_CONFIG_FILE);
         return -1;
@@ -260,7 +260,7 @@ int wifi_start_hostapd()
     /* Check whether already running */
     if (property_get(HOSTAPD_PROP_NAME, supp_status, NULL)
             && strcmp(supp_status, "running") == 0) {
-            LOGI("already running");
+            ALOGI("already running");
         return 0;
     }
 
@@ -335,13 +335,13 @@ int wifi_connect_to_hostapd()
     /* Make sure hostapd is running */
     if (!property_get(HOSTAPD_PROP_NAME, supp_status, NULL)
             || strcmp(supp_status, "running") != 0) {
-        LOGE("Supplicant not running, cannot connect");
+        ALOGE("Supplicant not running, cannot connect");
         return -1;
     }
 
     strcpy(iface, "softap.0");
     snprintf(ifname, sizeof(ifname), "%s/%s", IFACE_DIR, iface);
-    LOGD("ifname = %s\n", ifname);
+    ALOGD("ifname = %s\n", ifname);
 
     { /* check iface file is ready */
 	    int cnt = 160; /* 8 seconds (160*50)*/
@@ -351,10 +351,10 @@ int wifi_connect_to_hostapd()
 	    }      
 	    if (access(ifname, F_OK|W_OK)==0) {
 		    snprintf(ifname, sizeof(ifname), "%s/%s", IFACE_DIR, iface);
-		    LOGD("ifname %s is ready to read/write cnt=%d\n", ifname, cnt);
+		    ALOGD("ifname %s is ready to read/write cnt=%d\n", ifname, cnt);
 	    } else {
 		    strlcpy(ifname, iface, sizeof(ifname));
-		    LOGD("ifname %s is not ready, cnt=%d\n", ifname, cnt);
+		    ALOGD("ifname %s is not ready, cnt=%d\n", ifname, cnt);
 	    }
     }
     /* TODO: Actually connect to HOSTAPD. There is code on CAF which shows how to do this but  
@@ -409,7 +409,7 @@ static int rmmod(const char *modname)
 	}
 
 	if (ret != 0)
-		LOGD("Unable to unload driver module \"%s\": %s\n",
+		ALOGD("Unable to unload driver module \"%s\": %s\n",
 				modname, strerror(errno));
 	return ret;
 }
@@ -418,7 +418,7 @@ SoftapController::SoftapController() {
     mPid = 0;
     mSock = socket(AF_INET, SOCK_DGRAM, 0);
     if (mSock < 0)
-        LOGE("Failed to open socket");
+        ALOGE("Failed to open socket");
     memset(mIface, 0, sizeof(mIface));
     mProfileValid = 0;
     ctrl_conn = NULL;
@@ -439,7 +439,7 @@ int SoftapController::getPrivFuncNum(char *iface, const char *fname) {
     wrq.u.data.length = sizeof(mBuf) / sizeof(struct iw_priv_args);
     wrq.u.data.flags = 0;
     if ((ret = ioctl(mSock, SIOCGIWPRIV, &wrq)) < 0) {
-        LOGE("SIOCGIWPRIV failed: %d", ret);
+        ALOGE("SIOCGIWPRIV failed: %d", ret);
         return ret;
     }
     priv_ptr = (struct iw_priv_args *)wrq.u.data.pointer;
@@ -465,7 +465,7 @@ int SoftapController::setCommand(char *iface, const char *fname, unsigned buflen
     wrq.u.data.length = sizeof(tBuf) / sizeof(struct iw_priv_args);
     wrq.u.data.flags = 0;
     if ((ret = ioctl(mSock, SIOCGIWPRIV, &wrq)) < 0) {
-        LOGE("SIOCGIWPRIV failed: %d", ret);
+        ALOGE("SIOCGIWPRIV failed: %d", ret);
         return ret;
     }
 
@@ -478,7 +478,7 @@ int SoftapController::setCommand(char *iface, const char *fname, unsigned buflen
     }
 
     if (i == wrq.u.data.length) {
-        LOGE("iface:%s, fname: %s - function not supported", iface, fname);
+        ALOGE("iface:%s, fname: %s - function not supported", iface, fname);
         return -1;
     }
 
@@ -490,7 +490,7 @@ int SoftapController::setCommand(char *iface, const char *fname, unsigned buflen
                 break;
         }
         if (j == i) {
-            LOGE("iface:%s, fname: %s - invalid private ioctl", iface, fname);
+            ALOGE("iface:%s, fname: %s - invalid private ioctl", iface, fname);
             return -1;
         }
         sub_cmd = cmd;
@@ -515,16 +515,16 @@ int SoftapController::startDriver(char *iface) {
 	int fnum, ret;
 
 	if (mSock < 0) {
-		LOGE("Softap driver start - failed to open socket");
+		ALOGE("Softap driver start - failed to open socket");
 		return -1;
 	}
 	if (!iface || (iface[0] == '\0')) {
-		LOGD("Softap driver start - wrong interface");
+		ALOGD("Softap driver start - wrong interface");
 		iface = mIface;
 	}
 
     if ((write_int("/sys/devices/platform/msm_sdcc.3/polling", 1))<0){
-        LOGE("Error turning on polling");
+        ALOGE("Error turning on polling");
         ret = -1;
         goto end;
     }
@@ -537,14 +537,14 @@ int SoftapController::startDriver(char *iface) {
 	ret = insmod(WIFI_MODULE_EXT_PATH, "");
 
 	if (ret){
-        LOGE("init_module failed librasdioif\n");
+        ALOGE("init_module failed librasdioif\n");
         goto end;
     }
 
 	ret = insmod(WIFI_MODULE_PATH, "con_mode=1");
 
 	if (ret){
-        LOGE("init_module failed libra\n");
+        ALOGE("init_module failed libra\n");
         goto end;
     }
 
@@ -553,16 +553,16 @@ int SoftapController::startDriver(char *iface) {
 	/* Before starting the daemon, make sure its config file exists */
 	ret =ensure_config_file_exists();
 	if (ret < 0) {
-		LOGE("Softap driver start - configuration file missing");
+		ALOGE("Softap driver start - configuration file missing");
 		goto end;
 	}
 	/* Indicate interface down */
 
-	LOGD("Softap driver start: %d", ret);
+	ALOGD("Softap driver start: %d", ret);
 
 end:
     if ((write_int("/sys/devices/platform/msm_sdcc.3/polling", 0))<0)
-        LOGE("Error turning off polling");
+        ALOGE("Error turning off polling");
     return ret;
 }   
 
@@ -572,24 +572,24 @@ int SoftapController::stopDriver(char *iface) {
 
     //TODO: Ensure BT is turned off before trying to stop the driver. If it is turned on it will fail when trying to unload the Libra driver.
 
-	LOGE("softapcontroller->stopDriver");
+	ALOGE("softapcontroller->stopDriver");
 	if (mSock < 0) {
-		LOGE("Softap driver stop - failed to open socket");
+		ALOGE("Softap driver stop - failed to open socket");
 		return -1;
 	}
 	if (!iface || (iface[0] == '\0')) {
-		LOGD("Softap driver stop - wrong interface");
+		ALOGD("Softap driver stop - wrong interface");
 		iface = mIface;
 	}
 	ret = 0;
 	ret = rmmod("libra");
-	LOGD("Softap driver stop Libra: %d", ret);
+	ALOGD("Softap driver stop Libra: %d", ret);
     if(ret){
-        LOGD("Error stopping Libra - is Bluetooth turned on?");  
+        ALOGD("Error stopping Libra - is Bluetooth turned on?");  
         return ret;
     }
     ret = rmmod("librasdioif");
-	LOGD("Softap driver stop Librasdioif: %d", ret);
+	ALOGD("Softap driver stop Librasdioif: %d", ret);
 	return ret;
 }
 
@@ -599,11 +599,11 @@ int SoftapController::startSoftap() {
     int fnum, ret = 0;
 
     if (mPid) {
-        LOGE("Softap already started");
+        ALOGE("Softap already started");
         return 0;
     }
     if (mSock < 0) {
-        LOGE("Softap startap - failed to open socket");
+        ALOGE("Softap startap - failed to open socket");
         return -1;
     }
 
@@ -618,7 +618,7 @@ int SoftapController::startSoftap() {
 
         ret = wifi_start_hostapd();
         if (ret < 0) {
-            LOGE("Softap startap - starting hostapd fails");
+            ALOGE("Softap startap - starting hostapd fails");
 	        stopDriver("softap.0");
             return -1;
         }
@@ -629,7 +629,7 @@ int SoftapController::startSoftap() {
         ret = wifi_connect_to_hostapd();
         
         if (ret < 0) {
-            LOGE("Softap startap - connect to hostapd fails");
+            ALOGE("Softap startap - connect to hostapd fails");
             return -1;
         }
 
@@ -637,15 +637,15 @@ int SoftapController::startSoftap() {
 
         ret = wifi_load_profile(true);
         if (ret < 0) {
-            LOGE("Softap startap - load new configuration fails");
+            ALOGE("Softap startap - load new configuration fails");
             return -1;
         }
         if (ret) {
-            LOGE("Softap startap - failed: %d", ret);
+            ALOGE("Softap startap - failed: %d", ret);
         }
         else {
            mPid = pid;
-           LOGD("Softap startap - Ok");
+           ALOGD("Softap startap - Ok");
            usleep(AP_BSS_START_DELAY);
         }
     }
@@ -658,17 +658,17 @@ int SoftapController::stopSoftap() {
     int fnum, ret;
 
     if (mPid == 0) {
-        LOGE("Softap already stopped");
+        ALOGE("Softap already stopped");
         return 0;
     }
     if (mSock < 0) {
-        LOGE("Softap stopap - failed to open socket");
+        ALOGE("Softap stopap - failed to open socket");
         return -1;
     }
     wifi_close_hostapd_connection();
     ret = wifi_stop_hostapd();
     mPid = 0;
-    LOGD("Softap service stopped: %d", ret);
+    ALOGD("Softap service stopped: %d", ret);
 
     usleep(AP_BSS_STOP_DELAY);
     return ret;
@@ -679,10 +679,10 @@ bool SoftapController::isSoftapStarted() {
     /* Check whether already running */
     if (property_get(HOSTAPD_PROP_NAME, supp_status, NULL)
             && strcmp(supp_status, "running") == 0) {
-            LOGI("HOSTAPD running");
+            ALOGI("HOSTAPD running");
         return true;
     }
-    LOGI("HOSTAPD not running");
+    ALOGI("HOSTAPD not running");
     return false;
 }    
 
@@ -691,7 +691,7 @@ int SoftapController::addParam(int pos, const char *cmd, const char *arg)
     if (pos < 0)
         return pos;
     if ((unsigned)(pos + strlen(cmd) + strlen(arg) + 1) >= sizeof(mBuf)) {
-        LOGE("Command line is too big");
+        ALOGE("Command line is too big");
         return -1;
     }
     pos += sprintf(&mBuf[pos], "%s=%s,", cmd, arg);
@@ -719,18 +719,18 @@ int SoftapController::setSoftap(int argc, char *argv[]) {
     char buf[256];
     int len;
     if (mSock < 0) {
-        LOGE("Softap set - failed to open socket");
+        ALOGE("Softap set - failed to open socket");
         return -1;
     }
     if (argc < 4) {
-        LOGE("Softap set - missing arguments");
+        ALOGE("Softap set - missing arguments");
         return -1;
     }
     ret = 0;
     
     fd = open(HOSTAPD_CONFIG_FILE, O_CREAT|O_WRONLY|O_TRUNC, 0660);
     if (fd < 0) {
-        LOGE("Cannot create \"%s\": %s", HOSTAPD_CONFIG_FILE, strerror(errno));
+        ALOGE("Cannot create \"%s\": %s", HOSTAPD_CONFIG_FILE, strerror(errno));
         return -1;
     }
     len = snprintf(buf, sizeof(buf), "driver=QcHostapd\n");
@@ -796,14 +796,14 @@ int SoftapController::setSoftap(int argc, char *argv[]) {
 
     ret = wifi_load_profile(isSoftapStarted());
     if (ret < 0) {
-        LOGE("Softap set - load new configuration fails");
+        ALOGE("Softap set - load new configuration fails");
         return -1;
     }
     if (ret) {
-        LOGE("Softap set - failed: %d", ret);
+        ALOGE("Softap set - failed: %d", ret);
     }
     else {
-        LOGD("Softap set - Ok");
+        ALOGD("Softap set - Ok");
         usleep(AP_SET_CFG_DELAY);
     }
     return ret;
@@ -835,15 +835,15 @@ int SoftapController::fwReloadSoftap(int argc, char *argv[])
     char *iface;
 
     if (mSock < 0) {
-        LOGE("Softap fwrealod - failed to open socket");
+        ALOGE("Softap fwrealod - failed to open socket");
         return -1;
     }
     if (argc < 4) {
-        LOGE("Softap fwreload - missing arguments");
+        ALOGE("Softap fwreload - missing arguments");
         return -1;
     }
     ret = 0;
-    LOGD("Softap fwReload - Ok");
+    ALOGD("Softap fwReload - Ok");
     return ret;
 }
 
@@ -852,16 +852,16 @@ int SoftapController::clientsSoftap(char **retbuf)
     int ret;
 
     if (mSock < 0) {
-        LOGE("Softap clients - failed to open socket");
+        ALOGE("Softap clients - failed to open socket");
         return -1;
     }
     *mBuf = 0;
     ret = setCommand(mIface, "AP_GET_STA_LIST", SOFTAP_MAX_BUFFER_SIZE);
     if (ret) {
-        LOGE("Softap clients - failed: %d", ret);
+        ALOGE("Softap clients - failed: %d", ret);
     } else {
         asprintf(retbuf, "Softap clients:%s", mBuf);
-        LOGD("Softap clients:%s", mBuf);
+        ALOGD("Softap clients:%s", mBuf);
     }
     return ret;
 }

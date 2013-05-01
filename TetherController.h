@@ -19,7 +19,7 @@
 
 #include <linux/in.h>
 
-#include <utils/List.h>
+#include "List.h"
 
 #define HOUR 3600
 
@@ -27,8 +27,8 @@
  * tethering_lease_time_entries/values */
 #define DEFAULT_LEASE_TIME (1*HOUR)
 
-typedef android::List<char *> InterfaceCollection;
-typedef android::List<struct in_addr> NetAddressCollection;
+typedef android::netd::List<char *> InterfaceCollection;
+typedef android::netd::List<struct in_addr> NetAddressCollection;
 
 class TetherController {
     InterfaceCollection  *mInterfaces;

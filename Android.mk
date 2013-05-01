@@ -6,8 +6,11 @@ LOCAL_SRC_FILES:=                                      \
                   BandwidthController.cpp              \
                   CommandListener.cpp                  \
                   DnsProxyListener.cpp                 \
+                  MDnsSdListener.cpp                   \
+                  IdletimerController.cpp              \
                   NatController.cpp                    \
                   NetdCommand.cpp                      \
+                  NetdConstants.cpp                    \
                   NetlinkHandler.cpp                   \
                   NetlinkManager.cpp                   \
                   PanController.cpp                    \
@@ -26,15 +29,17 @@ LOCAL_MODULE:= netd
 LOCAL_C_INCLUDES := $(KERNEL_HEADERS) \
                     $(LOCAL_PATH)/../bluetooth/bluedroid/include \
                     $(LOCAL_PATH)/../bluetooth/bluez-clean-headers \
+                    external/mdnsresponder/mDNSShared \
                     external/openssl/include \
                     external/stlport/stlport \
                     bionic \
+                    bionic/libc/private \
                     $(call include-path-for, libhardware_legacy)/hardware_legacy
 
-LOCAL_CFLAGS :=
+LOCAL_CFLAGS := -Werror=format
 
 LOCAL_SHARED_LIBRARIES := libstlport libsysutils libcutils libnetutils \
-                          libcrypto libhardware_legacy
+                          libcrypto libhardware_legacy libmdnssd
 
 ifdef BOARD_SOFTAP_DEVICE
     LOCAL_CFLAGS += -D__BYTE_ORDER_LITTLE_ENDIAN
@@ -55,8 +60,9 @@ else ifeq ($(BOARD_SOFTAP_DEVICE_TI),true)
     LOCAL_C_INCLUDES += external/libnl-headers
     LOCAL_STATIC_LIBRARIES += libnl_2
 else
-    LOCAL_SRC_FILES += SoftapController.cpp
+  LOCAL_SRC_FILES += SoftapController.cpp
 endif
+
 
 ifneq ($(BOARD_HOSTAPD_DRIVER),)
   LOCAL_CFLAGS += -DHAVE_HOSTAPD
@@ -97,4 +103,3 @@ LOCAL_CFLAGS :=
 LOCAL_SHARED_LIBRARIES := libcutils
 
 include $(BUILD_EXECUTABLE)
-
